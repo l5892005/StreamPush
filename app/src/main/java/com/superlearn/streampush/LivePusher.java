@@ -32,6 +32,7 @@ public class LivePusher {
     public void startLive(String path) {
         native_start(path);
         videoChannel.startLive();
+        audioChannel.startLive();
     }
     // 初始化x264
     public native void native_init();
@@ -40,4 +41,13 @@ public class LivePusher {
     public native void native_start(String path);
     // 传入推流数据
     public native void native_pushVideo(byte[] data);
+
+    // 推入音频流
+    public native void native_pushAudio(byte[] bytes);
+
+    public native int getInputSamples();
+
+    public native void native_setAudioEncInfo(int i, int channels);
+
+    public native void native_release();
 }

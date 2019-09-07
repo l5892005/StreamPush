@@ -5,7 +5,8 @@ add_library(
         native-lib
         SHARED
         src/main/cpp/native-lib.cpp
-        src/main/cpp/VideoChannel.cpp)
+        src/main/cpp/VideoChannel.cpp
+        src/main/cpp/AudioChannel.cpp)
 find_library(
         log-lib
         log)
@@ -17,7 +18,8 @@ target_link_libraries(
         native-lib
         rtmp
         ${log-lib}
-        x264)
+        x264
+        faac)
 
 
 

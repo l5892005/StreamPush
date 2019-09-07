@@ -1,19 +1,21 @@
 #include <jni.h>
 #include <string>
+#include <faac.h>
 #include "x264.h"
 #include "librtmp/rtmp.h"
 #include "VideoChannel.h"
 #include "macro.h"
 #include "safe_queue.h"
+#include "AudioChannel.h"
 
 VideoChannel *videoChannel;
+AudioChannel *audioChannel;
 bool isStart;
 pthread_t pid;
 uint32_t start_time;
 int readyPushing = 0;
 //队列
 SafeQueue<RTMPPacket *> packets;
-
 void callback(RTMPPacket *packet) {
     if (packet) {
         //设置时间戳，需要根据时间戳，来
@@ -71,6 +73,8 @@ void *start(void *args) {
     // 开始工作
     packets.setWork(1);
     RTMPPacket *packet = 0;
+    // 把第一帧的音频编解码信息传给服务器
+    callback(audioChannel->getAudioTag());
     while (readyPushing) {
 //        队列取数据  pakets
         packets.get(packet);
@@ -124,6 +128,8 @@ Java_com_superlearn_streampush_LivePusher_native_1init(JNIEnv *env, jobject inst
     // TODO
     videoChannel = new VideoChannel;
     videoChannel->setVideoCallback(callback);
+    audioChannel = new AudioChannel;
+    audioChannel->setAudioCallback(callback);
 }
 
 extern "C"
@@ -160,12 +166,55 @@ extern "C"
 JNIEXPORT void JNICALL
 Java_com_superlearn_streampush_LivePusher_native_1pushVideo(JNIEnv *env, jobject instance,
                                                             jbyteArray data_) {
-
+    // TODO
     if (!videoChannel || !readyPushing) {
         return;
     }
     jbyte *data = env->GetByteArrayElements(data_, NULL);
-    // TODO
+    // nv21 -- > I420编码
     videoChannel->encodeData(data);
     env->ReleaseByteArrayElements(data_, data, 0);
+}
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_superlearn_streampush_LivePusher_native_1pushAudio(JNIEnv *env, jobject instance,
+                                                            jbyteArray bytes_) {
+    // TODO
+    if (!audioChannel || !readyPushing) {
+        return;
+    }
+    jbyte *data = env->GetByteArrayElements(bytes_, NULL);
+    // pcm -- > aac编码
+    audioChannel->encodeData(data);
+    env->ReleaseByteArrayElements(bytes_, data, 0);
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_superlearn_streampush_LivePusher_native_1setAudioEncInfo(JNIEnv *env, jobject instance,
+                                                                  jint sampleRateInHz,
+                                                                  jint channels) {
+    // TODO
+    if (audioChannel) {
+        audioChannel->setAudioEncInfo(sampleRateInHz, channels);
+    }
+}
+
+extern "C"
+JNIEXPORT jint JNICALL
+Java_com_superlearn_streampush_LivePusher_getInputSamples(JNIEnv *env, jobject instance) {
+    // TODO
+    if (audioChannel) {
+        return audioChannel->getInputSamples();
+    }
+    return -1;
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_superlearn_streampush_LivePusher_native_1release(JNIEnv *env, jobject instance) {
+
+    DELETE(videoChannel);
+    DELETE(audioChannel);
+
 }
